@@ -1,0 +1,102 @@
+name: "Weft Checkout"
+description: >-
+  Check out your repository from a Weft mirror instead of github.com, with
+  the freshness contract behind it. Falls back to actions/checkout when the
+  mirror cannot serve the commit, so adopting it is one line, not a decision.
+author: Weft
+branding:
+  icon: download-cloud
+  color: gray-dark
+
+inputs:
+  repository:
+    description: >-
+      The mirror on Weft, as `org/repo`. Defaults to `<org>/<this repository's
+      name>` where `<org>` is the `org` input.
+    required: false
+    default: ""
+  org:
+    description: >-
+      The Weft organization that holds the mirror. Used only when
+      `repository` is not given.
+    required: false
+    default: ""
+  token:
+    description: >-
+      A Weft token with `repo:read` on the mirror. Not needed for a public
+      mirror. Sent as an Authorization header, never in the URL, and never
+      written to the checkout.
+    required: false
+    default: ""
+  ref:
+    description: >-
+      The commit to check out. Defaults to the commit that triggered the
+      workflow (`github.sha`). On `pull_request` events that commit is a merge
+      GitHub makes and a mirror does not carry; pass
+      `${{ github.event.pull_request.head.sha }}` to check out the PR head
+      from the mirror instead.
+    required: false
+    default: ${{ github.sha }}
+  fetch-depth:
+    description: >-
+      `1` (default) for a shallow checkout of the commit, `0` for full history.
+      Any other depth takes the fallback.
+    required: false
+    default: "1"
+  path:
+    description: Relative path under `$GITHUB_WORKSPACE` to place the repository.
+    required: false
+    default: ""
+  api-url:
+    description: The Weft deployment to fetch from.
+    required: false
+    default: https://api.weft.sh
+  fallback:
+    description: >-
+      When `true` (default), any failure to check out from the mirror runs
+      `actions/checkout` instead and reports why. When `false`, the step
+      fails with the mirror's reason.
+    required: false
+    default: "true"
+  timeout-seconds:
+    description: How long to wait for the mirror probe before falling back.
+    required: false
+    default: "10"
+
+outputs:
+  source:
+    description: "`weft` when the mirror served the checkout, `fallback` when actions/checkout did."
+    value: ${{ steps.weft.outputs.source }}
+  commit:
+    description: The commit that was checked out.
+    value: ${{ steps.weft.outputs.commit }}
+  reason:
+    description: Why the fallback ran, when it did.
+    value: ${{ steps.weft.outputs.reason }}
+
+runs:
+  using: composite
+  steps:
+    - id: weft
+      shell: bash
+      env:
+        WEFT_INPUT_REPOSITORY: ${{ inputs.repository }}
+        WEFT_INPUT_ORG: ${{ inputs.org }}
+        WEFT_INPUT_TOKEN: ${{ inputs.token }}
+        WEFT_INPUT_REF: ${{ inputs.ref }}
+        WEFT_INPUT_FETCH_DEPTH: ${{ inputs.fetch-depth }}
+        WEFT_INPUT_PATH: ${{ inputs.path }}
+        WEFT_INPUT_API_URL: ${{ inputs.api-url }}
+        WEFT_INPUT_FALLBACK: ${{ inputs.fallback }}
+        WEFT_INPUT_TIMEOUT: ${{ inputs.timeout-seconds }}
+        WEFT_GITHUB_REPOSITORY: ${{ github.repository }}
+        WEFT_GITHUB_SERVER_URL: ${{ github.server_url }}
+      run: bash "$GITHUB_ACTION_PATH/checkout.sh"
+
+    - name: Fall back to actions/checkout
+      if: steps.weft.outputs.source == 'fallback'
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
+        fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}

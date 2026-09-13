@@ -1,0 +1,94 @@
+# The action's own gate.
+#
+# Lint and the fallback proof run on Weft's hosted runners (`runs-on: weft`),
+# so every push here is a job on the fleet. The real-mirror proof runs once on
+# `ubuntu-latest` on purpose: this action exists for GitHub-hosted runners,
+# and only a GitHub-hosted runner can prove that environment. Both real jobs
+# check out this repository from its own mirror on weft.sh and fsck what
+# arrived.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: weft
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n checkout.sh
+      - uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: .
+
+  fallback:
+    # An unreachable api-url must land on actions/checkout, and say so.
+    runs-on: weft
+    steps:
+      - uses: actions/checkout@v4
+      - id: co
+        uses: ./
+        with:
+          repository: weftsh/checkout
+          api-url: https://127.0.0.1:9
+          timeout-seconds: 3
+          path: out
+      - run: |
+          test "${{ steps.co.outputs.source }}" = fallback
+          test -f out/action.yml
+          git -C out rev-parse HEAD | grep -qx "${{ github.sha }}"
+          echo "fallback reason: ${{ steps.co.outputs.reason }}"
+
+  refuse:
+    # With fallback off, a commit nowhere upstream fails with the mirror's
+    # own sentence, never a stale tree.
+    runs-on: weft
+    steps:
+      - uses: actions/checkout@v4
+      - id: co
+        continue-on-error: true
+        uses: ./
+        with:
+          repository: weftsh/checkout
+          token: ${{ secrets.WEFT_TOKEN }}
+          ref: 0000000000000000000000000000000000000001
+          fallback: "false"
+          path: out
+      - run: |
+          test "${{ steps.co.outcome }}" = failure
+          echo "${{ steps.co.outputs.reason }}" | grep -q "did not surface it"
+
+  real:
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, weft]
+        depth: ["1", "0"]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: co
+        uses: ./
+        with:
+          repository: weftsh/checkout
+          token: ${{ secrets.WEFT_TOKEN }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: ${{ matrix.depth }}
+          fallback: "false"
+          path: out
+      - working-directory: out
+        run: |
+          test "${{ steps.co.outputs.source }}" = weft
+          git rev-parse HEAD | grep -qx "${{ steps.co.outputs.commit }}"
+          git fsck --full --strict
+          git remote get-url weft
+          git remote get-url origin | grep -q github.com/weftsh/checkout
+          ! git config --get http.extraHeader
+          ! grep -rq "Authorization" .git/config
+          if [ "${{ matrix.depth }}" = 0 ]; then ! test -f .git/shallow; else test -f .git/shallow; fi
