@@ -161,7 +161,19 @@ explain() {
 }
 
 started=$(date +%s)
-if ! git -C "$dest" fetch -q ${depth[@]+"${depth[@]}"} weft "$ref" 2>/tmp/weft-fetch.err; then
+# One retry, a second later. A commit pushed moments ago can arrive
+# while the mirror is still ingesting it; the first fetch is refused by
+# name and the second is served. Two attempts cost a second and spare
+# a fallback that clones the whole repository from github.com.
+fetched=false
+for attempt in 1 2; do
+  if git -C "$dest" fetch -q ${depth[@]+"${depth[@]}"} weft "$ref" 2>/tmp/weft-fetch.err; then
+    fetched=true
+    break
+  fi
+  [ "$attempt" = 2 ] || sleep 1
+done
+if [ "$fetched" != true ]; then
   err="$(explain)"
   case "$err" in
     *PACK*|"") err="$(tr -d '\r' </tmp/weft-fetch.err | sed -n 's/^\(remote: \|fatal: \)\{0,1\}//p' | grep -v '^$' | tail -n 3 | tr '\n' ' ')" ;;
