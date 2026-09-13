@@ -58,7 +58,7 @@ jobs:
         with:
           repository: weftsh/checkout
           token: ${{ secrets.WEFT_TOKEN }}
-          ref: 0000000000000000000000000000000000000001
+          ref: "0000000000000000000000000000000000000001"
           fallback: "false"
           path: out
       - run: |
@@ -88,7 +88,7 @@ jobs:
           git rev-parse HEAD | grep -qx "${{ steps.co.outputs.commit }}"
           git fsck --full --strict
           git remote get-url weft
-          git remote get-url origin | grep -q github.com/weftsh/checkout
+          git remote get-url origin | grep -qi github.com/weftsh/checkout
           ! git config --get http.extraHeader
           ! grep -rq "Authorization" .git/config
           if [ "${{ matrix.depth }}" = 0 ]; then ! test -f .git/shallow; else test -f .git/shallow; fi
