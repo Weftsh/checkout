@@ -32,9 +32,10 @@ inputs:
     description: >-
       The commit to check out. Defaults to the commit that triggered the
       workflow (`github.sha`). On `pull_request` events that commit is a merge
-      GitHub makes and a mirror does not carry; pass
-      `${{ github.event.pull_request.head.sha }}` to check out the PR head
-      from the mirror instead.
+      GitHub makes and a mirror does not carry; pass the PR head commit
+      (github.event.pull_request.head.sha) to check out from the mirror
+      instead. Descriptions may not hold an expression, so it is spelled
+      without the braces here; the README shows the workflow line.
     required: false
     default: ${{ github.sha }}
   fetch-depth:
