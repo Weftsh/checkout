@@ -1,8 +1,5 @@
 name: "Weft Checkout"
-description: >-
-  Check out your repository from a Weft mirror instead of github.com, with
-  the freshness contract behind it. Falls back to actions/checkout when the
-  mirror cannot serve the commit, so adopting it is one line, not a decision.
+description: Check out from a Weft mirror instead of github.com. Falls back to actions/checkout, by name, when the mirror cannot serve.
 author: Weft
 branding:
   icon: download-cloud
