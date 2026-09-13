@@ -91,4 +91,7 @@ jobs:
           git remote get-url origin | grep -qi github.com/weftsh/checkout
           ! git config --get http.extraHeader
           ! grep -rq "Authorization" .git/config
-          if [ "${{ matrix.depth }}" = 0 ]; then ! test -f .git/shallow; else test -f .git/shallow; fi
+          # Depth 0 must be full history. Depth 1 may be either: the mirror
+          # serves a full clone as a superset of a shallow one when that is
+          # what it has ready, and git leaves no shallow file then.
+          if [ "${{ matrix.depth }}" = 0 ]; then ! test -f .git/shallow; fi

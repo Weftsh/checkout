@@ -37,8 +37,9 @@ inputs:
     default: ${{ github.sha }}
   fetch-depth:
     description: >-
-      `1` (default) for a shallow checkout of the commit, `0` for full history.
-      Any other depth takes the fallback.
+      `1` (default) asks for the commit alone, `0` for full history. The
+      mirror may serve full history for a shallow request when that is what
+      it has ready. Any other depth takes the fallback.
     required: false
     default: "1"
   path:

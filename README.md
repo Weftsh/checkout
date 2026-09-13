@@ -28,7 +28,7 @@ moves.
 | `org` | | The Weft organization, used when `repository` is not given. |
 | `token` | | A Weft token with `repo:read` on the mirror. Not needed for a public mirror. Sent as a header, never in the URL, never written to disk. |
 | `ref` | `${{ github.sha }}` | The commit to check out. Must be a commit id; a branch name takes the fallback. |
-| `fetch-depth` | `1` | `1` for the commit alone, `0` for full history. Anything else takes the fallback. |
+| `fetch-depth` | `1` | `1` asks for the commit alone, `0` for full history. Anything else takes the fallback. The mirror may answer a shallow request with full history when that is what it has ready; a shallow tree is not guaranteed, a complete one is. |
 | `path` | | Where to put the repository, relative to the workspace. |
 | `api-url` | `https://api.weft.sh` | The Weft deployment. |
 | `fallback` | `true` | Run `actions/checkout` when the mirror cannot serve. `false` fails the step with the mirror's reason instead. |
